@@ -8,7 +8,7 @@ from app.models.order import Order, OrderItem
 from app.routers.orders import router as order_router
 
 
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(
