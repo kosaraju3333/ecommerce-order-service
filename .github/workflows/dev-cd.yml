@@ -48,7 +48,7 @@ jobs:
 
               \"docker stop ecommerce-order || true\",
               \"docker rm ecommerce-order || true\",
-              \"docker run -d --name ecommerce-order --restart unless-stopped --env-file /opt/ecommerce/order/order.env -p 8004:8004 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-order:${IMAGE_TAG}\",
+              \"docker run -d --name ecommerce-order --network ecommerce-network --restart unless-stopped --env-file /opt/ecommerce/order/order.env -p 8004:8004 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-order:${IMAGE_TAG}\",
               \"sleep 5\",
               \"curl --fail http://localhost:8004/health\",
               \"echo '=== Order deployment successful ==='\",
