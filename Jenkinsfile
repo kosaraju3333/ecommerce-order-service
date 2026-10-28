@@ -168,6 +168,8 @@ pipeline {
 
                     def IMAGE_URI = "${ECR_REGISTRY}/${env.ECR_REPOSITORY}:${IMAGE_TAG}"
 
+                     env.DEPLOY_IMAGE_URI = IMAGE_URI
+
                     echo "Building Docker Image: ${IMAGE_URI}"
 
                     sh """
@@ -190,6 +192,70 @@ pipeline {
                     """
 
                     echo "Image pushed successfully: ${IMAGE_URI}"
+                }
+            }
+        }
+
+
+        stage('Release - Deploy Order to STAGING') {
+            when {
+                allOf {
+                    not {
+                        changeRequest()
+                    }
+                    expression {
+                        return env.BRANCH_NAME?.startsWith('release/')
+                    }
+                }
+            }
+
+            steps {
+                sshagent(credentials: ['staging-app-ssh']) {
+                    sh '''
+                        set -eu
+
+                        ssh -o BatchMode=yes \
+                            -o StrictHostKeyChecking=yes \
+                            ubuntu@192.168.5.17 \
+                            "IMAGE_URI='$DEPLOY_IMAGE_URI' bash -s" <<'REMOTE'
+                    set -eu
+
+                    CONTAINER_NAME="ecommerce-order-staging"
+                    NETWORK="ecommerce-network"
+                    ENV_FILE="/opt/ecommerce/staging/order/order.env"
+
+                    test -r "$ENV_FILE" || {
+                        echo "ERROR: Order environment file not readable"
+                        exit 1
+                    }
+
+                    aws ecr get-login-password --region us-east-1 |
+                        docker login --username AWS \
+                        --password-stdin \
+                        828048069567.dkr.ecr.us-east-1.amazonaws.com
+
+                    docker pull "$IMAGE_URI"
+
+                    docker stop "$CONTAINER_NAME"
+                    docker rm "$CONTAINER_NAME"
+
+                    docker run -d \
+                        --name "$CONTAINER_NAME" \
+                        --network "$NETWORK" \
+                        --restart unless-stopped \
+                        --env-file "$ENV_FILE" \
+                        -p 8004:8004 \
+                        "$IMAGE_URI"
+
+                    echo "Waiting for Order Service..."
+                    sleep 10
+
+                    curl --fail --silent --show-error \
+                        http://localhost:8004/health
+
+                    echo
+                    echo "Order deployment successful"
+                                '''
                 }
             }
         }
