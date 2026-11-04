@@ -1,0 +1,70 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ecommerce-order-migration-v1
+  namespace: ecommerce-order
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+
+  template:
+    spec:
+      serviceAccountName: order-service-account
+      restartPolicy: Never
+
+      containers:
+        - name: alembic-migration
+          image: 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-order-prod:v1
+          imagePullPolicy: IfNotPresent
+
+          command: ["alembic", "upgrade", "head"]
+
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-order-credentials
+                  key: DATABASE_URL
+
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-order-credentials
+                  key: SECRET_KEY
+
+            - name: ALGORITHM
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-order-credentials
+                  key: ALGORITHM
+
+            - name: CART_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-order-credentials
+                  key: CART_SERVICE_URL
+
+            - name: PRODUCT_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-order-credentials
+                  key: PRODUCT_SERVICE_URL
+
+            - name: FRONTEND_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-order-credentials
+                  key: FRONTEND_URL
+
+          volumeMounts:
+            - name: order-secrets
+              mountPath: /mnt/secrets-store
+              readOnly: true
+
+      volumes:
+        - name: order-secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: ecommerce-order-secrets

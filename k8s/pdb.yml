@@ -1,0 +1,10 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ecommerce-order-pdb
+  namespace: ecommerce-order
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: ecommerce-order

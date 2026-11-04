@@ -1,0 +1,25 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-order-service
+  ### Namespace containing your order Deployment
+  namespace: ecommerce-order
+  labels:
+    app: ecommerce-order
+
+spec:
+  ### Exposes order Service internally
+  type: ClusterIP
+
+  ### Routes traffic to Pods with this label
+  selector:
+    app: ecommerce-order
+
+  ports:
+    - name: http
+      protocol: TCP
+      ### Port exposed by the Kubernetes Service
+      port: 8004
+      ### FastAPI container port
+      targetPort: 8004
